@@ -6,8 +6,8 @@ import * as os from "os";
 
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider("debugmemory", new MemoryContentProvider()));
-	context.subscriptions.push(vscode.commands.registerCommand("code-debug.examineMemoryLocation", examineMemory));
-	context.subscriptions.push(vscode.commands.registerCommand("code-debug.getFileNameNoExt", () => {
+	context.subscriptions.push(vscode.commands.registerCommand("pebble-debug.examineMemoryLocation", examineMemory));
+	context.subscriptions.push(vscode.commands.registerCommand("pebble-debug.getFileNameNoExt", () => {
 		if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document || !vscode.window.activeTextEditor.document.fileName) {
 			vscode.window.showErrorMessage("No editor with valid file name active");
 			return;
@@ -16,7 +16,7 @@ export function activate(context: vscode.ExtensionContext) {
 		const ext = path.extname(fileName);
 		return fileName.substring(0, fileName.length - ext.length);
 	}));
-	context.subscriptions.push(vscode.commands.registerCommand("code-debug.getFileBasenameNoExt", () => {
+	context.subscriptions.push(vscode.commands.registerCommand("pebble-debug.getFileBasenameNoExt", () => {
 		if (!vscode.window.activeTextEditor || !vscode.window.activeTextEditor.document || !vscode.window.activeTextEditor.document.fileName) {
 			vscode.window.showErrorMessage("No editor with valid file name active");
 			return;
@@ -56,7 +56,7 @@ function getMemoryRange(range: string) {
 }
 
 function examineMemory() {
-	const socketlists = path.join(os.tmpdir(), "code-debug-sockets");
+	const socketlists = path.join(os.tmpdir(), "pebble-debug-sockets");
 	if (!fs.existsSync(socketlists)) {
 		if (process.platform == "win32")
 			return vscode.window.showErrorMessage("This command is not available on windows");
@@ -89,7 +89,7 @@ function examineMemory() {
 class MemoryContentProvider implements vscode.TextDocumentContentProvider {
 	provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): Thenable<string> {
 		return new Promise((resolve, reject) => {
-			const conn = net.connect(path.join(os.tmpdir(), "code-debug-sockets", uri.authority.toLowerCase()));
+			const conn = net.connect(path.join(os.tmpdir(), "pebble-debug-sockets", uri.authority.toLowerCase()));
 			let from: number, to: number;
 			let highlightAt = -1;
 			const splits = uri.query.split("&");

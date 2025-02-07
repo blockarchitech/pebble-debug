@@ -82,14 +82,14 @@ export class MI2DebugSession extends DebugSession {
 			});
 			this.commandServer.on("error", err => {
 				if (process.platform != "win32")
-					this.handleMsg("stderr", "Code-Debug WARNING: Utility Command Server: Error in command socket " + err.toString() + "\nCode-Debug WARNING: The examine memory location command won't work");
+					this.handleMsg("stderr", "pebble-debug WARNING: Utility Command Server: Error in command socket " + err.toString() + "\nCode-Debug WARNING: The examine memory location command won't work");
 			});
-			if (!fs.existsSync(systemPath.join(os.tmpdir(), "code-debug-sockets")))
-				fs.mkdirSync(systemPath.join(os.tmpdir(), "code-debug-sockets"));
-			this.commandServer.listen(this.serverPath = systemPath.join(os.tmpdir(), "code-debug-sockets", ("Debug-Instance-" + Math.floor(Math.random() * 36 * 36 * 36 * 36).toString(36)).toLowerCase()));
+			if (!fs.existsSync(systemPath.join(os.tmpdir(), "pebble-debug-sockets")))
+				fs.mkdirSync(systemPath.join(os.tmpdir(), "pebble-debug-sockets"));
+			this.commandServer.listen(this.serverPath = systemPath.join(os.tmpdir(), "pebble-debug-sockets", ("Debug-Instance-" + Math.floor(Math.random() * 36 * 36 * 36 * 36).toString(36)).toLowerCase()));
 		} catch (e) {
 			if (process.platform != "win32")
-				this.handleMsg("stderr", "Code-Debug WARNING: Utility Command Server: Failed to start " + e.toString() + "\nCode-Debug WARNING: The examine memory location command won't work");
+				this.handleMsg("stderr", "pebble-debug WARNING: Utility Command Server: Failed to start " + e.toString() + "\nCode-Debug WARNING: The examine memory location command won't work");
 		}
 	}
 

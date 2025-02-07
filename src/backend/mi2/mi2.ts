@@ -311,6 +311,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			args = this.preargs.concat(this.extraargs || []);
 			if (executable)
 				args = args.concat([executable]);
+			this.log("info", args.join(" "));
 			this.process = ChildProcess.spawn(this.application, args, { cwd: cwd, env: this.procEnv });
 			this.process.stdout.on("data", this.stdout.bind(this));
 			this.process.stderr.on("data", this.stderr.bind(this));
@@ -500,13 +501,14 @@ export class MI2 extends EventEmitter implements IBackend {
 			options.push("--start");
 		const startCommand: string = ["exec-run"].concat(options).join(" ");
 		return new Promise((resolve, reject) => {
-			this.log("console", "Running executable");
-			this.sendCommand(startCommand).then((info) => {
-				if (info.resultRecords.resultClass == "running")
-					resolve(undefined);
-				else
-					reject();
-			}, reject);
+			// this.log("console", "Running executable");
+			// this.sendCommand(startCommand).then((info) => {
+			// 	if (info.resultRecords.resultClass == "running")
+			// 		resolve(undefined);
+			// 	else
+			// 		reject();
+			// }, reject);
+			resolve(undefined);
 		});
 	}
 
