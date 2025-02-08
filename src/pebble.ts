@@ -5,7 +5,6 @@ import { MI2, escape } from "./backend/mi2/mi2";
 import { SSHArguments, ValuesFormattingMode } from './backend/backend';
 import { buildGdbCommands } from './commandHelper';
 import { PebbleTool } from './pebbleToolHelper';
-// import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -59,10 +58,8 @@ class PebbleDebugSession extends MI2DebugSession {
 	}
 
 	protected override launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
-		// spawn emulator
 		const pebbleTool = PebbleTool.getInstance();
 		pebbleTool.spawnEmulator(args.workDir, args.platform as any);
-		// gdbpath is in ~/pebble-dev
 		const dbgCommand = _getGdbPath();
 		if (!this.checkCommand(dbgCommand)) {
 			this.sendErrorResponse(response, 104, `Configured debugger ${dbgCommand} not found.`);
@@ -87,16 +84,10 @@ class PebbleDebugSession extends MI2DebugSession {
 		const fw_elf = _getFirmwareSymbolFile(args.platform, SDK_VERSION);
 
 		const gdbCommands = buildGdbCommands(args.elfPath, fw_elf, gdbPort, args.platform, SDK_VERSION, args.executablePath);
-		let gdbArgs = [
-			fw_elf,
-			"-q",
+
+		this.miDebugger = new MI2(dbgCommand, [
 			"--interpreter=mi2"
-		]
-		for (const gdbCommand of gdbCommands) {
-			let cmd = `--ex= ${gdbCommand}`;
-			gdbArgs.push(cmd);
-		}
-		this.miDebugger = new MI2(dbgCommand, gdbArgs, [], []);
+		], [], []);
 		this.initDebugger();
 		this.quit = false;
 		this.platform = args.platform;
@@ -106,12 +97,12 @@ class PebbleDebugSession extends MI2DebugSession {
 		this.setValuesFormattingMode("disabled");
 		this.miDebugger.frameFilters = false;
 		this.miDebugger.printCalls = true;
-		this.miDebugger.debugOutput = true;
+		this.miDebugger.debugOutput = false;
 		this.miDebugger.prettyPrint = true;
 		this.stopAtEntry = false;
 		this.miDebugger.registerLimit = "";
 
-		this.miDebugger.connect(args.buildPath, "", `:${gdbPort}`, []).then(() => {
+		this.miDebugger.connect(args.buildPath, fw_elf, `:${gdbPort}`, gdbCommands).then(() => {
 			this.sendResponse(response);
 		}, err => {
 			this.sendErrorResponse(response, 102, `Failed to launch: ${err.toString()}`);
@@ -133,7 +124,6 @@ class PebbleDebugSession extends MI2DebugSession {
 	}
 
 	protected override attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
-		// gdbpath is in ~/pebble-dev
 		const dbgCommand = _getGdbPath();
 		if (!this.checkCommand(dbgCommand)) {
 			this.sendErrorResponse(response, 104, `Configured debugger ${dbgCommand} not found.`);
@@ -145,6 +135,8 @@ class PebbleDebugSession extends MI2DebugSession {
 			this.sendErrorResponse(response, 104, `Emulator with platform ${args.platform} not found.`);
 			return;
 		}
+
+
 		const emulator = emulators[args.platform][SDK_VERSION];
 		if (!emulator) {
 			this.sendErrorResponse(response, 104, `Emulator with platform ${args.platform} does not support SDK version ${SDK_VERSION}.`);
@@ -155,25 +147,27 @@ class PebbleDebugSession extends MI2DebugSession {
 			this.sendErrorResponse(response, 104, `Emulator with platform ${args.platform} does not have a GDB server.`);
 			return;
 		}
-		const fw_elf = _getFirmwareSymbolFile(args.platform, SDK_VERSION);
-
-		const gdbCommands = buildGdbCommands(args.elfPath, fw_elf, gdbPort, args.platform, SDK_VERSION, args.executablePath);
-		let gdbArgs = [
-			fw_elf,
-			"-q",
-			"--interpreter=mi2"
-			// do --ex for each gdb command
-
-		]
-		for (const gdbCommand of gdbCommands) {
-			let cmd = `--ex="${gdbCommand}"`;
-			gdbArgs.push(cmd);
+		// check if emulator.qemu.pid exists, and is currently running
+		const pid = emulator.qemu.pid;
+		let pidExists = false;
+		try {
+			pidExists = fs.existsSync(`/proc/${pid}`);
+		} catch (e) {
+			// ignore
 		}
-		this.miDebugger = new MI2(dbgCommand, gdbArgs, [], []);
+		if (!pidExists) {
+			this.sendErrorResponse(response, 104, `Emulator with platform ${args.platform} is not running.`);
+			return;
+		}
+
+		const fw_elf = _getFirmwareSymbolFile(args.platform, SDK_VERSION);
+		const gdbCommands = buildGdbCommands(args.elfPath, fw_elf, gdbPort, args.platform, SDK_VERSION, args.executablePath);
+
+		this.miDebugger = new MI2(dbgCommand, [ "--interpreter=mi2" ], [], []);
 		this.initDebugger();
 		this.quit = false;
 		this.attached = false;
-		this.initialRunCommand = RunCommand.NONE; // TODO: change this
+		this.initialRunCommand = RunCommand.NONE;
 		this.isSSH = false;
 		this.platform = args.platform;
 		this.setValuesFormattingMode("disabled");
@@ -184,7 +178,7 @@ class PebbleDebugSession extends MI2DebugSession {
 		this.stopAtEntry = false;
 		this.miDebugger.registerLimit = "";
 
-		this.miDebugger.connect(args.buildPath, "", `:${gdbPort}`, []).then(() => {
+		this.miDebugger.connect(args.buildPath, fw_elf, `:${gdbPort}`, gdbCommands).then(() => {
 			this.sendResponse(response);
 		}, err => {
 			this.sendErrorResponse(response, 102, `Failed to launch: ${err.toString()}`);

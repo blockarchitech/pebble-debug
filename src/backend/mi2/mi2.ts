@@ -245,21 +245,8 @@ export class MI2 extends EventEmitter implements IBackend {
 
 		if (!debuggerPath.isAbsolute(target))
 			target = debuggerPath.join(cwd, target);
-
-		const cmds = [
-			this.sendCommand("gdb-set target-async on", true),
-			new Promise(resolve => {
-				this.sendCommand("list-features").then(done => {
-					this.features = done.result("features");
-					resolve(undefined);
-				}, () => {
-					// Default to no supported features on error
-					this.features = [];
-					resolve(undefined);
-				});
-			}),
-			this.sendCommand("environment-directory \"" + escape(cwd) + "\"", true)
-		];
+		this.features = [];
+		const cmds = [];
 		if (!attach)
 			cmds.push(this.sendCommand("file-exec-and-symbols \"" + escape(target) + "\""));
 		if (this.prettyPrint)
@@ -318,7 +305,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.process.on("exit", () => this.emit("quit"));
 			this.process.on("error", err => this.emit("launcherror", err));
 			const promises = this.initCommands(target, cwd, true);
-			promises.push(this.sendCommand("target-select remote " + target));
+			promises.push(this.sendCommand("target-select extended-remote " + target));
 			promises.push(...autorun.map(value => { return this.sendUserInput(value); }));
 			Promise.all(promises).then(() => {
 				this.emit("debug-ready");
@@ -1010,6 +997,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.sendRaw(sel + "-" + command);
 		});
 	}
+
 
 	isReady(): boolean {
 		return this.isSSH ? this.sshReady : !!this.process;

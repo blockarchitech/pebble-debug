@@ -12,41 +12,36 @@ function getARMCSTool(tool: string): string {
 }
 
 function buildGdbCommands(appElfPath: string, fwElfPath: string, gdbPort: number, platform: string, sdkVersion: string, binaryPath: string): string[] {
-    interface ElfSection {
-        index: string;
-        name: string;
-        size: string;
-        vma: string;
-        lma: string;
-        file_offset: string;
-        align: string;
-        flags: string;
-    }
 
-    function findAppSectionOffsets(appElfPath: string): { [key: string]: number } {
-        const SectionRow = ['index', 'name', 'size', 'vma', 'lma', 'file_offset', 'align', 'flags'];
+    function findAppSectionOffsets(appElfPath: string) {
         const toolpath = getARMCSTool('arm-none-eabi-objdump');
-        const info = execSync(`${toolpath} --headers --wide ${appElfPath}`)
+        const elfSections = execSync(`${toolpath} --headers --wide ${appElfPath}`)
             .toString()
             .split('\n')
-            .slice(5)
-            .filter(line => line.trim().length > 0);
-        const sections: ElfSection[] = info.map(line => 
-            line.trim().split(/\s+/).reduce((acc, val, idx) => ({ ...acc, [SectionRow[idx]]: val }), {}) as ElfSection);
-        const offsets: { [key: string]: number } = sections
-            .filter(section => section.flags?.includes('ALLOC') || ['.text', '.data', '.bss'].includes(section.name))
-            .reduce((acc, section) => ({ ...acc, [section.name]: parseInt(section.vma, 16) }), {});
+            .slice(5);
+        const offsets: { [key: string]: number } = {};
+        for (const sectionString of elfSections) {
+            const [index, name, size, vma, lma, file_offset, align, ...flags] = sectionString.split(/\s+/).filter(Boolean);
+            flags.forEach((flag, i) => {
+                flags[i] = flag.replace(/,/g, '');
+            });
+            if (flags.includes('ALLOC')) {
+                offsets[name] = parseInt(vma, 16);
+            }
+        }
         return offsets;
     }
 
-    function getSymbolCommand(elf: string, baseAddrExpr: string): string {
+    function getSymbolCommand(elf: string, baseAddrExpr: string) {
         const offsets = findAppSectionOffsets(elf);
-        const command = [`add-symbol-file "${elf}" ${baseAddrExpr}+${offsets['.text'].toString(16)}`];
-        Object.entries(offsets).forEach(([section, offset]) => {
+        const command = ['add-symbol-file', `"${elf}"`, `${baseAddrExpr}+0x${offsets['.text'].toString(16)}`];
+        for (const [section, offset] of Object.entries(offsets)) {
             if (section !== '.text') {
-                command.push(`-s ${section} ${baseAddrExpr}+${offset.toString(16)}`);
+                let offsetHex = offset.toString(16);
+                offsetHex = '0x' + offsetHex;
+                command.push(`-s ${section} ${baseAddrExpr}+${offsetHex}`);
             }
-        });
+        }
         return command.join(' ');
     }
 
@@ -70,30 +65,20 @@ function buildGdbCommands(appElfPath: string, fwElfPath: string, gdbPort: number
         const workerLoadAddress = `*(void**)(${workerLoadOffset})`;
         return [
             "set charset US-ASCII",
-            // `target remote :${gdbPort}`,
-            // "file " + binaryPath,
             "set confirm off",
             getSymbolCommand(appElfPath, appLoadAddress),
-            // getSymbolCommand(fwElfPath, workerLoadAddress),
             "set confirm on",
             "break app_crashed",
-            'echo \nPress ctrl-D or type \'quit\' to exit.\n',
-            'echo Try `pebble gdb --help` for a short cheat sheet.\n'
         ];
     } else if (platform === 'chalk' || platform === 'diorite' || platform === 'emery' || platform === 'basalt') { // 4.x firmware
         const appLoadAddress = '*(void**)&g_app_load_address';
         const workerLoadAddress = '*(void**)&g_worker_load_address';
         return [
             "set charset US-ASCII",
-            // `target remote :${gdbPort}`,
-            // "file " + binaryPath,
             "set confirm off",
             getSymbolCommand(appElfPath, appLoadAddress),
-            // getSymbolCommand(fwElfPath, workerLoadAddress),
             "set confirm on",
             "break app_crashed",
-            'echo \nPress ctrl-D or type \'quit\' to exit.\n',
-            'echo Try `pebble gdb --help` for a short cheat sheet.\n'
         ];
     } else {
         throw new Error(`Unsupported platform: ${platform}`);
