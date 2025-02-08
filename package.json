@@ -30,6 +30,7 @@
 			"supported": true
 		}
 	},
+	"debug": true,
 	"contributes": {
 		"commands": [
 			{
@@ -61,7 +62,8 @@
 							"platform",
 							"elfPath",
 							"executablePath",
-							"buildPath"
+							"buildPath",
+							"workDir"
 						],
 						"properties": {
 							"target": {
@@ -79,6 +81,10 @@
 							"buildPath": {
 								"type": "string",
 								"description": "Path to the build directory."
+							},
+							"workDir": {
+								"type": "string",
+								"description": "Working directory for the emulator."
 							}
 						}
 					},

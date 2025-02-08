@@ -4,6 +4,8 @@ import { DebugProtocol } from 'vscode-debugprotocol';
 import { MI2, escape } from "./backend/mi2/mi2";
 import { SSHArguments, ValuesFormattingMode } from './backend/backend';
 import { buildGdbCommands } from './commandHelper';
+import { PebbleTool } from './pebbleToolHelper';
+// import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -13,6 +15,7 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
 	elfPath: string;
 	executablePath: string;
 	buildPath: string;
+	workDir: string;
 }
 
 export interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments {
@@ -20,6 +23,7 @@ export interface AttachRequestArguments extends DebugProtocol.AttachRequestArgum
 	elfPath: string;
 	executablePath: string;
 	buildPath: string;
+	workDir: string;
 }
 
 const SDK_VERSION = "4.3";
@@ -55,13 +59,16 @@ class PebbleDebugSession extends MI2DebugSession {
 	}
 
 	protected override launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
+		// spawn emulator
+		const pebbleTool = PebbleTool.getInstance();
+		pebbleTool.spawnEmulator(args.workDir, args.platform as any);
 		// gdbpath is in ~/pebble-dev
 		const dbgCommand = _getGdbPath();
 		if (!this.checkCommand(dbgCommand)) {
 			this.sendErrorResponse(response, 104, `Configured debugger ${dbgCommand} not found.`);
 			return;
 		}
-		
+
 		const emulators = JSON.parse(fs.readFileSync("/tmp/pb-emulator.json", "utf8"));
 		if (!emulators[args.platform]) {
 			this.sendErrorResponse(response, 104, `Emulator with platform ${args.platform} not found.`);
@@ -83,7 +90,7 @@ class PebbleDebugSession extends MI2DebugSession {
 		let gdbArgs = [
 			fw_elf,
 			"-q",
-			"--interpreter=mi2"			
+			"--interpreter=mi2"
 		]
 		for (const gdbCommand of gdbCommands) {
 			let cmd = `--ex= ${gdbCommand}`;
@@ -92,6 +99,7 @@ class PebbleDebugSession extends MI2DebugSession {
 		this.miDebugger = new MI2(dbgCommand, gdbArgs, [], []);
 		this.initDebugger();
 		this.quit = false;
+		this.platform = args.platform;
 		this.attached = false;
 		this.initialRunCommand = RunCommand.NONE; // TODO: change this
 		this.isSSH = false;
@@ -110,6 +118,20 @@ class PebbleDebugSession extends MI2DebugSession {
 		});
 	}
 
+	protected override quitEvent(): void {
+		this.quit = true;
+		this.sendEvent(new TerminatedEvent());
+
+		if (this.serverPath)
+			fs.unlink(this.serverPath, (err) => {
+				// eslint-disable-next-line no-console
+				console.error("Failed to unlink debug server");
+			});
+		
+		const pebbleTool = PebbleTool.getInstance();
+		pebbleTool.killEmulator(this.platform as any);
+	}
+
 	protected override attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
 		// gdbpath is in ~/pebble-dev
 		const dbgCommand = _getGdbPath();
@@ -117,7 +139,7 @@ class PebbleDebugSession extends MI2DebugSession {
 			this.sendErrorResponse(response, 104, `Configured debugger ${dbgCommand} not found.`);
 			return;
 		}
-		
+
 		const emulators = JSON.parse(fs.readFileSync("/tmp/pb-emulator.json", "utf8"));
 		if (!emulators[args.platform]) {
 			this.sendErrorResponse(response, 104, `Emulator with platform ${args.platform} not found.`);
@@ -141,7 +163,7 @@ class PebbleDebugSession extends MI2DebugSession {
 			"-q",
 			"--interpreter=mi2"
 			// do --ex for each gdb command
-			
+
 		]
 		for (const gdbCommand of gdbCommands) {
 			let cmd = `--ex="${gdbCommand}"`;
@@ -153,6 +175,7 @@ class PebbleDebugSession extends MI2DebugSession {
 		this.attached = false;
 		this.initialRunCommand = RunCommand.NONE; // TODO: change this
 		this.isSSH = false;
+		this.platform = args.platform;
 		this.setValuesFormattingMode("disabled");
 		this.miDebugger.frameFilters = false;
 		this.miDebugger.printCalls = false;

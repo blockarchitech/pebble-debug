@@ -63,7 +63,7 @@ function buildGdbCommands(appElfPath: string, fwElfPath: string, gdbPort: number
         throw new Error(`Couldn't find the ${kind} address offset.`);
     }
 
-    if (platform === 'aplite' || platform === 'basalt') { // 3.x firmware
+    if (platform === 'aplite') { // 3.x firmware
         const appLoadOffset = findLegacyAppLoadOffset(fwElfPath, 'app');
         const workerLoadOffset = findLegacyAppLoadOffset(fwElfPath, 'worker');
         const appLoadAddress = `*(void**)(${appLoadOffset})`;
@@ -80,7 +80,7 @@ function buildGdbCommands(appElfPath: string, fwElfPath: string, gdbPort: number
             'echo \nPress ctrl-D or type \'quit\' to exit.\n',
             'echo Try `pebble gdb --help` for a short cheat sheet.\n'
         ];
-    } else if (platform === 'chalk' || platform === 'diorite' || platform === 'emery') { // 4.x firmware
+    } else if (platform === 'chalk' || platform === 'diorite' || platform === 'emery' || platform === 'basalt') { // 4.x firmware
         const appLoadAddress = '*(void**)&g_app_load_address';
         const workerLoadAddress = '*(void**)&g_worker_load_address';
         return [
