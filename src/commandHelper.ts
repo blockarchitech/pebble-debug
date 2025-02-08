@@ -2,6 +2,15 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 
+function getARMCSTool(tool: string): string {
+    const armcstools = path.join(process.env.HOME, 'pebble-dev', 'pebble-sdk-4.6-rc2-linux64', 'arm-cs-tools', 'bin');
+    const toolPath = path.join(armcstools, tool);
+    if (!fs.existsSync(toolPath)) {
+        throw new Error(`Can't find ${tool}. Is the SDK installed?`);
+    }
+    return toolPath;
+}
+
 function buildGdbCommands(appElfPath: string, fwElfPath: string, gdbPort: number, platform: string, sdkVersion: string, binaryPath: string): string[] {
     interface ElfSection {
         index: string;
@@ -16,7 +25,8 @@ function buildGdbCommands(appElfPath: string, fwElfPath: string, gdbPort: number
 
     function findAppSectionOffsets(appElfPath: string): { [key: string]: number } {
         const SectionRow = ['index', 'name', 'size', 'vma', 'lma', 'file_offset', 'align', 'flags'];
-        const info = execSync(`~/pebble-dev/pebble-sdk-4.6-rc2-linux64/arm-cs-tools/bin/arm-none-eabi-objdump --headers --wide ${appElfPath}`)
+        const toolpath = getARMCSTool('arm-none-eabi-objdump');
+        const info = execSync(`${toolpath} --headers --wide ${appElfPath}`)
             .toString()
             .split('\n')
             .slice(5)
@@ -41,7 +51,8 @@ function buildGdbCommands(appElfPath: string, fwElfPath: string, gdbPort: number
     }
 
     function findLegacyAppLoadOffset(fwElfPath: string, kind: string): number {
-        const elfSections = execSync(`~/pebble-dev/pebble-sdk-4.6-rc2-linux64/arm-cs-tools/bin/arm-none-eabi-readelf -W -s ${fwElfPath}`)
+        const toolpath = getARMCSTool('arm-none-eabi-readelf');
+        const elfSections = execSync(`${toolpath} -W -s ${fwElfPath}`)
             .toString()
             .split('\n');
         for (const line of elfSections) {

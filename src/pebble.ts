@@ -5,6 +5,8 @@ import { MI2, escape } from "./backend/mi2/mi2";
 import { SSHArguments, ValuesFormattingMode } from './backend/backend';
 import { buildGdbCommands } from './commandHelper';
 import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
 	platform: string;
@@ -21,6 +23,22 @@ export interface AttachRequestArguments extends DebugProtocol.AttachRequestArgum
 }
 
 const SDK_VERSION = "4.3";
+const HOMEDIR = os.homedir();
+
+function _getFirmwareSymbolFile(platform: string, sdk_version: string): string {
+	const fw_symbols = path.join(HOMEDIR, ".pebble-sdk", "SDKs", sdk_version, "sdk-core", "pebble", platform, "qemu", `${platform}_sdk_debug.elf`);
+	if (!fs.existsSync(fw_symbols)) {
+		throw new Error(`Firmware symbols not found at ${fw_symbols}. Is the SDK installed?`);
+	}
+	return fw_symbols;
+}
+function _getGdbPath(): string {
+	const gdbPath = path.join(HOMEDIR, "pebble-dev", "pebble-sdk-4.6-rc2-linux64", "arm-cs-tools", "bin", "arm-none-eabi-gdb");
+	if (!fs.existsSync(gdbPath)) {
+		throw new Error(`Can't find Pebble gdb. Is the SDK installed?`);
+	}
+	return gdbPath;
+}
 
 class PebbleDebugSession extends MI2DebugSession {
 	protected override initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
@@ -38,7 +56,7 @@ class PebbleDebugSession extends MI2DebugSession {
 
 	protected override launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
 		// gdbpath is in ~/pebble-dev
-		const dbgCommand = "/home/me/pebble-dev/pebble-sdk-4.6-rc2-linux64/arm-cs-tools/bin/arm-none-eabi-gdb";
+		const dbgCommand = _getGdbPath();
 		if (!this.checkCommand(dbgCommand)) {
 			this.sendErrorResponse(response, 104, `Configured debugger ${dbgCommand} not found.`);
 			return;
@@ -59,7 +77,7 @@ class PebbleDebugSession extends MI2DebugSession {
 			this.sendErrorResponse(response, 104, `Emulator with platform ${args.platform} does not have a GDB server.`);
 			return;
 		}
-		const fw_elf = `/home/me/.pebble-sdk/SDKs/${SDK_VERSION}/sdk-core/pebble/${args.platform}/qemu/${args.platform}_sdk_debug.elf`;
+		const fw_elf = _getFirmwareSymbolFile(args.platform, SDK_VERSION);
 
 		const gdbCommands = buildGdbCommands(args.elfPath, fw_elf, gdbPort, args.platform, SDK_VERSION, args.executablePath);
 		let gdbArgs = [
@@ -94,7 +112,7 @@ class PebbleDebugSession extends MI2DebugSession {
 
 	protected override attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
 		// gdbpath is in ~/pebble-dev
-		const dbgCommand = "/home/me/pebble-dev/pebble-sdk-4.6-rc2-linux64/arm-cs-tools/bin/arm-none-eabi-gdb";
+		const dbgCommand = _getGdbPath();
 		if (!this.checkCommand(dbgCommand)) {
 			this.sendErrorResponse(response, 104, `Configured debugger ${dbgCommand} not found.`);
 			return;
@@ -115,7 +133,7 @@ class PebbleDebugSession extends MI2DebugSession {
 			this.sendErrorResponse(response, 104, `Emulator with platform ${args.platform} does not have a GDB server.`);
 			return;
 		}
-		const fw_elf = `/home/me/.pebble-sdk/SDKs/${SDK_VERSION}/sdk-core/pebble/${args.platform}/qemu/${args.platform}_sdk_debug.elf`;
+		const fw_elf = _getFirmwareSymbolFile(args.platform, SDK_VERSION);
 
 		const gdbCommands = buildGdbCommands(args.elfPath, fw_elf, gdbPort, args.platform, SDK_VERSION, args.executablePath);
 		let gdbArgs = [
