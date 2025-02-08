@@ -12,16 +12,12 @@ import * as path from 'path';
 export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
 	platform: string;
 	elfPath: string;
-	executablePath: string;
-	buildPath: string;
 	workDir: string;
 }
 
 export interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments {
 	platform: string;
 	elfPath: string;
-	executablePath: string;
-	buildPath: string;
 	workDir: string;
 }
 
@@ -83,7 +79,7 @@ class PebbleDebugSession extends MI2DebugSession {
 		}
 		const fw_elf = _getFirmwareSymbolFile(args.platform, SDK_VERSION);
 
-		const gdbCommands = buildGdbCommands(args.elfPath, fw_elf, gdbPort, args.platform, SDK_VERSION, args.executablePath);
+		const gdbCommands = buildGdbCommands(args.elfPath, fw_elf, args.platform);
 
 		this.miDebugger = new MI2(dbgCommand, [
 			"--interpreter=mi2"
@@ -102,7 +98,7 @@ class PebbleDebugSession extends MI2DebugSession {
 		this.stopAtEntry = false;
 		this.miDebugger.registerLimit = "";
 
-		this.miDebugger.connect(args.buildPath, fw_elf, `:${gdbPort}`, gdbCommands).then(() => {
+		this.miDebugger.connect(path.join(args.workDir, "build"), fw_elf, `:${gdbPort}`, gdbCommands).then(() => {
 			this.sendResponse(response);
 		}, err => {
 			this.sendErrorResponse(response, 102, `Failed to launch: ${err.toString()}`);
@@ -161,7 +157,7 @@ class PebbleDebugSession extends MI2DebugSession {
 		}
 
 		const fw_elf = _getFirmwareSymbolFile(args.platform, SDK_VERSION);
-		const gdbCommands = buildGdbCommands(args.elfPath, fw_elf, gdbPort, args.platform, SDK_VERSION, args.executablePath);
+		const gdbCommands = buildGdbCommands(args.elfPath, fw_elf, args.platform);
 
 		this.miDebugger = new MI2(dbgCommand, [ "--interpreter=mi2" ], [], []);
 		this.initDebugger();
@@ -178,7 +174,7 @@ class PebbleDebugSession extends MI2DebugSession {
 		this.stopAtEntry = false;
 		this.miDebugger.registerLimit = "";
 
-		this.miDebugger.connect(args.buildPath, fw_elf, `:${gdbPort}`, gdbCommands).then(() => {
+		this.miDebugger.connect(path.join(args.workDir, "build"), fw_elf, `:${gdbPort}`, gdbCommands).then(() => {
 			this.sendResponse(response);
 		}, err => {
 			this.sendErrorResponse(response, 102, `Failed to launch: ${err.toString()}`);

@@ -11,7 +11,7 @@ function getARMCSTool(tool: string): string {
     return toolPath;
 }
 
-function buildGdbCommands(appElfPath: string, fwElfPath: string, gdbPort: number, platform: string, sdkVersion: string, binaryPath: string): string[] {
+function buildGdbCommands(appElfPath: string, fwElfPath: string, platform: string): string[] {
 
     function findAppSectionOffsets(appElfPath: string) {
         const toolpath = getARMCSTool('arm-none-eabi-objdump');

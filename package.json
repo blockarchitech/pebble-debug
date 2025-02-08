@@ -61,26 +61,16 @@
 						"required": [
 							"platform",
 							"elfPath",
-							"executablePath",
-							"buildPath",
 							"workDir"
 						],
 						"properties": {
-							"target": {
+							"platform": {
 								"type": "string",
 								"description": "Emulator platform to debug."
 							},
 							"elfPath": {
 								"type": "string",
 								"description": "Path to the ELF file to debug."
-							},
-							"executablePath": {
-								"type": "string",
-								"description": "Path to the executable file to debug."
-							},
-							"buildPath": {
-								"type": "string",
-								"description": "Path to the build directory."
 							},
 							"workDir": {
 								"type": "string",
@@ -91,12 +81,11 @@
 					"attach": {
 						"required": [
 							"platform",
-							"executablePath",
-							"buildPath",
-							"elfPath"
+							"elfPath",
+							"workDir"
 						],
 						"properties": {
-							"target": {
+							"platform": {
 								"type": "string",
 								"description": "Emulator platform to debug."
 							},
@@ -104,40 +93,110 @@
 								"type": "string",
 								"description": "Path to the ELF file to debug."
 							},
-							"executablePath": {
+							"workDir": {
 								"type": "string",
-								"description": "Path to the executable file to debug."
-							},
-							"buildPath": {
-								"type": "string",
-								"description": "Path to the build directory."
+								"description": "Working directory for the emulator."
 							}
+
 						}
 					}
 				},
 				"initialConfigurations": [
 					{
-						"name": "Debug Basalt",
+						"name": "Debug Aplite (Classic, Steel)",
+						"type": "pebble",
+						"request": "launch",
+						"platform": "aplite",
+						"elfPath": "${workspaceFolder}/build/aplite/pebble-app.elf",
+						"workDir": "${workspaceFolder}/"
+					},
+					{
+						"name": "Debug Basalt (Time, Time Steel)",
 						"type": "pebble",
 						"request": "launch",
 						"platform": "basalt",
 						"elfPath": "${workspaceFolder}/build/basalt/pebble-app.elf",
-						"executablePath": "${workspaceFolder}/build/basalt/pebble-app.bin",
-						"buildPath": "${workspaceFolder}/build"
+						"workDir": "${workspaceFolder}/"
+					},
+					{
+						"name": "Debug Chalk (Time Round)",
+						"type": "pebble",
+						"request": "launch",
+						"platform": "chalk",
+						"elfPath": "${workspaceFolder}/build/chalk/pebble-app.elf",
+						"workDir": "${workspaceFolder}/"
+					},
+					{
+						"name": "Debug Diorite (Pebble 2)",
+						"type": "pebble",
+						"request": "launch",
+						"platform": "diorite",
+						"elfPath": "${workspaceFolder}/build/diorite/pebble-app.elf",
+						"workDir": "${workspaceFolder}/"
+					},
+					{
+						"name": "Debug Emery (Time 2)",
+						"type": "pebble",
+						"request": "launch",
+						"platform": "emery",
+						"elfPath": "${workspaceFolder}/build/emery/pebble-app.elf",
+						"workDir": "${workspaceFolder}/"
 					}
 				],
 				"configurationSnippets": [
 					{
-						"label": "Pebble: Launch Basalt",
-						"description": "Starts a new Basalt emulator and connects to it",
+						"label": "Pebble: Debug Aplite (Classic, Steel)",
+						"description": "Debug an app to run on the Aplite platform (Classic, Steel).",
 						"body": {
 							"type": "pebble",
 							"request": "launch",
-							"name": "${2:Launch Basalt}",
+							"platform": "aplite",
+							"elfPath": "${workspaceFolder}/build/aplite/pebble-app.elf",
+							"workDir": "${workspaceFolder}/"
+						}
+					},
+					{
+						"label": "Pebble: Debug Basalt (Time, Time Steel)",
+						"description": "Debug an app to run on the Basalt platform (Time, Time Steel).",
+						"body": {
+							"type": "pebble",
+							"request": "launch",
 							"platform": "basalt",
-							"elfPath": "${1:/path/to/your/elf}",
-							"executablePath": "${1:/path/to/your/exec}",
-							"buildPath": "${1:/path/to/your/build}"
+							"elfPath": "${workspaceFolder}/build/basalt/pebble-app.elf",
+							"workDir": "${workspaceFolder}/"
+						}
+					},
+					{
+						"label": "Pebble: Debug Chalk (Time Round)",
+						"description": "Debug an app to run on the Chalk platform (Time Round).",
+						"body": {
+							"type": "pebble",
+							"request": "launch",
+							"platform": "chalk",
+							"elfPath": "${workspaceFolder}/build/chalk/pebble-app.elf",
+							"workDir": "${workspaceFolder}/"
+						}
+					},
+					{
+						"label": "Pebble: Debug Diorite (Pebble 2)",
+						"description": "Debug an app to run on the Diorite platform (Pebble 2).",
+						"body": {
+							"type": "pebble",
+							"request": "launch",
+							"platform": "diorite",
+							"elfPath": "${workspaceFolder}/build/diorite/pebble-app.elf",
+							"workDir": "${workspaceFolder}/"
+						}
+					},
+					{
+						"label": "Pebble: Debug Emery (Time 2)",
+						"description": "Debug an app to run on the Emery platform (Time 2).",
+						"body": {
+							"type": "pebble",
+							"request": "launch",
+							"platform": "emery",
+							"elfPath": "${workspaceFolder}/build/emery/pebble-app.elf",
+							"workDir": "${workspaceFolder}/"
 						}
 					}
 					
@@ -182,10 +241,5 @@
 		"prettier": "^2.6.2",
 		"ts-node": "^10.8.0",
 		"typescript": "^4.3.2"
-	},
-	"__metadata": {
-		"id": "2fd22b8e-b3b8-4e7f-9a28-a5e2d1bdd0d4",
-		"publisherDisplayName": "blockarchitech",
-		"publisherId": "3ad98fdc-4d7d-6302-8fae-a66a35eacb89"
 	}
 }
