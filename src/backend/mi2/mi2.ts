@@ -545,6 +545,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			// send SIGINT/ctrl C
 			// ctrl C pauses the target in GDB
 			this.process.kill("SIGINT");
+			resolve(true);
 
 		});
 	}
@@ -720,12 +721,9 @@ export class MI2 extends EventEmitter implements IBackend {
 					this.breakpoints.delete(breakpoint);
 					this.log("console", "Breakpoint removed");
 					// "reload" (send -exec-interrupt and -exec-continue) to make sure the breakpoint is removed
-					this.interrupt().then(() => {
-						this.continue().then(() => {
-							resolve(true);
-						}, reject);
+					this.reload().then(() => {
+						resolve(true);
 					}, reject);
-					resolve(true);
 				} else resolve(false);
 			});
 		});
@@ -748,7 +746,27 @@ export class MI2 extends EventEmitter implements IBackend {
 					this.breakpoints.set(index, k);
 				}
 			});
-			Promise.all(promises).then(resolve, reject);
+			Promise.all(promises).then(() => {
+				this.reload().then(() => {
+					resolve(undefined);
+				}, reject);
+			}, reject);
+		});
+	}
+
+	private reload(): Thenable<boolean> {
+		if (trace)
+			this.log("stderr", "reload");
+		// interrupt and continue to make sure the breakpoints are reloaded
+		return new Promise((resolve, reject) => {
+			// this.interrupt().then(() => {
+			// 	setTimeout(() => {
+			// 		this.continue().then((running) => {
+			// 			resolve(running);
+			// 		}, reject);
+			// 	}, 250);
+			// }, reject);
+			resolve(true);
 		});
 	}
 
