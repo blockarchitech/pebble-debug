@@ -8,6 +8,7 @@ import { PebbleTool } from './pebbleToolHelper';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { execSync } from 'child_process';
 
 export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
 	platform: string;
@@ -114,7 +115,7 @@ class PebbleDebugSession extends MI2DebugSession {
 				// eslint-disable-next-line no-console
 				console.error("Failed to unlink debug server");
 			});
-		
+
 		const pebbleTool = PebbleTool.getInstance();
 		pebbleTool.killEmulator(this.platform as any);
 	}
@@ -159,7 +160,7 @@ class PebbleDebugSession extends MI2DebugSession {
 		const fw_elf = _getFirmwareSymbolFile(args.platform, SDK_VERSION);
 		const gdbCommands = buildGdbCommands(args.elfPath, fw_elf, args.platform);
 
-		this.miDebugger = new MI2(dbgCommand, [ "--interpreter=mi2" ], [], []);
+		this.miDebugger = new MI2(dbgCommand, ["--interpreter=mi2"], [], []);
 		this.initDebugger();
 		this.quit = false;
 		this.attached = false;

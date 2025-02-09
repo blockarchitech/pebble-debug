@@ -217,6 +217,7 @@ export class MI2DebugSession extends DebugSession {
 			this.sendResponse(response);
 		} catch (err) {
 			this.sendErrorResponse(response, 11, `Could not continue: ${err}`);
+			this.quitEvent();
 		}
 	}
 
@@ -670,6 +671,7 @@ export class MI2DebugSession extends DebugSession {
 			this.sendResponse(response);
 		}, msg => {
 			this.sendErrorResponse(response, 2, `Could not continue: ${msg}`);
+			this.quitEvent();
 		});
 	}
 
@@ -678,6 +680,7 @@ export class MI2DebugSession extends DebugSession {
 			this.sendResponse(response);
 		}, msg => {
 			this.sendErrorResponse(response, 2, `Could not continue: ${msg}`);
+			this.quitEvent();
 		});
 	}
 

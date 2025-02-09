@@ -10,7 +10,7 @@
 	"publisher": "blockarchitech",
 	"icon": "images/icon.png",
 	"engines": {
-		"vscode": "^1.55.0"
+		"vscode": "^1.61.0"
 	},
 	"main": "./out/src/frontend/extension",
 	"activationEvents": [
@@ -107,40 +107,40 @@
 						"type": "pebble",
 						"request": "launch",
 						"platform": "aplite",
-						"elfPath": "${workspaceFolder}/build/aplite/pebble-app.elf",
-						"workDir": "${workspaceFolder}/"
+						"elfPath": "^\"\\${workspaceFolder}/build/aplite/pebble-app.elf\"",
+						"workDir": "^\"\\${workspaceFolder}/\""
 					},
 					{
 						"name": "Debug Basalt (Time, Time Steel)",
 						"type": "pebble",
 						"request": "launch",
 						"platform": "basalt",
-						"elfPath": "${workspaceFolder}/build/basalt/pebble-app.elf",
-						"workDir": "${workspaceFolder}/"
+						"elfPath": "^\"\\${workspaceFolder}/build/basalt/pebble-app.elf\"",
+						"workDir": "^\"\\${workspaceFolder}/\""
 					},
 					{
 						"name": "Debug Chalk (Time Round)",
 						"type": "pebble",
 						"request": "launch",
 						"platform": "chalk",
-						"elfPath": "${workspaceFolder}/build/chalk/pebble-app.elf",
-						"workDir": "${workspaceFolder}/"
+						"elfPath": "^\"\\${workspaceFolder}/build/chalk/pebble-app.elf\"",
+						"workDir": "^\"\\${workspaceFolder}/\""
 					},
 					{
 						"name": "Debug Diorite (Pebble 2)",
 						"type": "pebble",
 						"request": "launch",
 						"platform": "diorite",
-						"elfPath": "${workspaceFolder}/build/diorite/pebble-app.elf",
-						"workDir": "${workspaceFolder}/"
+						"elfPath": "^\"\\${workspaceFolder}/build/diorite/pebble-app.elf\"",
+						"workDir": "^\"\\${workspaceFolder}/\""
 					},
 					{
 						"name": "Debug Emery (Time 2)",
 						"type": "pebble",
 						"request": "launch",
 						"platform": "emery",
-						"elfPath": "${workspaceFolder}/build/emery/pebble-app.elf",
-						"workDir": "${workspaceFolder}/"
+						"elfPath": "^\"\\${workspaceFolder}/build/emery/pebble-app.elf\"",
+						"workDir": "^\"\\${workspaceFolder}/\""
 					}
 				],
 				"configurationSnippets": [
@@ -148,55 +148,60 @@
 						"label": "Pebble: Debug Aplite (Classic, Steel)",
 						"description": "Debug an app to run on the Aplite platform (Classic, Steel).",
 						"body": {
+							"name": "Debug Aplite (Classic, Steel)",
 							"type": "pebble",
 							"request": "launch",
 							"platform": "aplite",
-							"elfPath": "${workspaceFolder}/build/aplite/pebble-app.elf",
-							"workDir": "${workspaceFolder}/"
+							"elfPath": "^\"\\${workspaceFolder}/build/aplite/pebble-app.elf\"",
+							"workDir": "^\"\\${workspaceFolder}/\""
 						}
 					},
 					{
 						"label": "Pebble: Debug Basalt (Time, Time Steel)",
 						"description": "Debug an app to run on the Basalt platform (Time, Time Steel).",
 						"body": {
+							"name": "Debug Basalt (Time, Time Steel)",
 							"type": "pebble",
 							"request": "launch",
 							"platform": "basalt",
-							"elfPath": "${workspaceFolder}/build/basalt/pebble-app.elf",
-							"workDir": "${workspaceFolder}/"
+							"elfPath": "^\"\\${workspaceFolder}/build/basalt/pebble-app.elf\"",
+							"workDir": "^\"\\${workspaceFolder}/\""
 						}
 					},
 					{
 						"label": "Pebble: Debug Chalk (Time Round)",
 						"description": "Debug an app to run on the Chalk platform (Time Round).",
 						"body": {
+							"name": "Debug Chalk (Time Round)",
 							"type": "pebble",
 							"request": "launch",
 							"platform": "chalk",
-							"elfPath": "${workspaceFolder}/build/chalk/pebble-app.elf",
-							"workDir": "${workspaceFolder}/"
+							"elfPath": "^\"\\${workspaceFolder}/build/chalk/pebble-app.elf\"",
+							"workDir": "^\"\\${workspaceFolder}/\""
 						}
 					},
 					{
 						"label": "Pebble: Debug Diorite (Pebble 2)",
 						"description": "Debug an app to run on the Diorite platform (Pebble 2).",
 						"body": {
+							"name": "Debug Diorite (Pebble 2)",
 							"type": "pebble",
 							"request": "launch",
 							"platform": "diorite",
-							"elfPath": "${workspaceFolder}/build/diorite/pebble-app.elf",
-							"workDir": "${workspaceFolder}/"
+							"elfPath": "^\"\\${workspaceFolder}/build/diorite/pebble-app.elf\"",
+							"workDir": "^\"\\${workspaceFolder}/\""
 						}
 					},
 					{
 						"label": "Pebble: Debug Emery (Time 2)",
 						"description": "Debug an app to run on the Emery platform (Time 2).",
 						"body": {
+							"name": "Debug Emery (Time 2)",
 							"type": "pebble",
 							"request": "launch",
 							"platform": "emery",
-							"elfPath": "${workspaceFolder}/build/emery/pebble-app.elf",
-							"workDir": "${workspaceFolder}/"
+							"elfPath": "^\"\\${workspaceFolder}/build/emery/pebble-app.elf\"",
+							"workDir": "^\"\\${workspaceFolder}/\""
 						}
 					}
 					
@@ -206,16 +211,7 @@
 	},
 	"scripts": {
 		"vscode:prepublish": "tsc -p ./",
-		"test": "mocha",
-		"coverage": "nyc npm test",
-		"compile": "tsc -watch -p ./",
-		"lint": "eslint . --ext .ts --format compact",
-		"lint-and-fix": "eslint . --ext .ts --fix --format compact",
-		"spellcheck-docs": "cspell lint **/*.md",
-		"lint-docs": "markdownlint **/*.md",
-		"link-check": "markdown-link-check *.md",
-		"prettier-write-docs": "prettier --write **/*.md",
-		"prettier-check-docs": "prettier --check **/*.md"
+		"compile": "tsc -watch -p ./"
 	},
 	"dependencies": {
 		"ssh2": "^1.6.0",

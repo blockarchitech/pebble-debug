@@ -7,6 +7,7 @@ import * as net from "net";
 import * as fs from "fs";
 import * as path from "path";
 import { Client, ClientChannel, ExecOptions } from "ssh2";
+import { PebbleTool } from "../../pebbleToolHelper";
 
 export function escape(str: string) {
 	return str.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
@@ -518,6 +519,8 @@ export class MI2 extends EventEmitter implements IBackend {
 				clearTimeout(to);
 			});
 			this.sendRaw("-gdb-exit");
+			const tool = PebbleTool.getInstance();
+			this.emit("quit");
 		}
 	}
 
