@@ -23,7 +23,7 @@ function couldBeOutput(line: string) {
 	return true;
 }
 
-const trace = false;
+const trace = true;
 
 class LogMessage {
 	protected logMsgVar = "";
@@ -303,10 +303,12 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.process = ChildProcess.spawn(this.application, args, { cwd: cwd, env: this.procEnv });
 			this.process.stdout.on("data", this.stdout.bind(this));
 			this.process.stderr.on("data", this.stderr.bind(this));
+			// ignore SIGINT
+			this.process.on("SIGINT", () => { });
 			this.process.on("exit", () => this.emit("quit"));
 			this.process.on("error", err => this.emit("launcherror", err));
 			const promises = this.initCommands(target, cwd, true);
-			promises.push(this.sendCommand("target-select extended-remote " + target));
+			promises.push(this.sendCommand("target-select remote " + target));
 			promises.push(...autorun.map(value => { return this.sendUserInput(value); }));
 			Promise.all(promises).then(() => {
 				this.emit("debug-ready");
@@ -511,6 +513,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			});
 			this.sendRaw("-gdb-exit");
 		} else {
+			this.log("stderr", "stop");
 			const proc = this.process;
 			const to = setTimeout(() => {
 				process.kill(-proc.pid);
@@ -539,9 +542,10 @@ export class MI2 extends EventEmitter implements IBackend {
 		if (trace)
 			this.log("stderr", "interrupt");
 		return new Promise((resolve, reject) => {
-			this.sendCommand("exec-interrupt").then((info) => {
-				resolve(info.resultRecords.resultClass == "done");
-			}, reject);
+			// send SIGINT/ctrl C
+			// ctrl C pauses the target in GDB
+			this.process.kill("SIGINT");
+
 		});
 	}
 
@@ -714,6 +718,13 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.sendCommand("break-delete " + this.breakpoints.get(breakpoint)).then((result) => {
 				if (result.resultRecords.resultClass == "done") {
 					this.breakpoints.delete(breakpoint);
+					this.log("console", "Breakpoint removed");
+					// "reload" (send -exec-interrupt and -exec-continue) to make sure the breakpoint is removed
+					this.interrupt().then(() => {
+						this.continue().then(() => {
+							resolve(true);
+						}, reject);
+					}, reject);
 					resolve(true);
 				} else resolve(false);
 			});
