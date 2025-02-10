@@ -2,7 +2,7 @@
 
 Debug Pebble apps running in the emulator using gdb, right inside Visual Studio Code.
 
-View a video demo of this extension:
+View a video demo of this extension: <br />
 [![Pebble Debug Demo](https://img.youtube.com/vi/1l7fUHSPt6k/0.jpg)](https://youtu.be/1l7fUHSPt6k)
 
 ## Configuration
