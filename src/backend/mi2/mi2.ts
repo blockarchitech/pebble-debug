@@ -759,6 +759,7 @@ export class MI2 extends EventEmitter implements IBackend {
 			this.log("stderr", "reload");
 		// interrupt and continue to make sure the breakpoints are reloaded
 		return new Promise((resolve, reject) => {
+			// TODO: Auto reload thing.
 			// this.interrupt().then(() => {
 			// 	setTimeout(() => {
 			// 		this.continue().then((running) => {

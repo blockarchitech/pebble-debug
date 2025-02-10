@@ -1,14 +1,12 @@
 import { MI2DebugSession, RunCommand } from './mibase';
-import { DebugSession, InitializedEvent, TerminatedEvent, StoppedEvent, OutputEvent, Thread, StackFrame, Scope, Source, Handles } from 'vscode-debugadapter';
+import { DebugSession, TerminatedEvent } from 'vscode-debugadapter';
 import { DebugProtocol } from 'vscode-debugprotocol';
-import { MI2, escape } from "./backend/mi2/mi2";
-import { SSHArguments, ValuesFormattingMode } from './backend/backend';
+import { MI2 } from "./backend/mi2/mi2";
 import { buildGdbCommands } from './commandHelper';
 import { PebbleTool } from './pebbleToolHelper';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { execSync } from 'child_process';
 
 export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
 	platform: string;
@@ -24,21 +22,55 @@ export interface AttachRequestArguments extends DebugProtocol.AttachRequestArgum
 
 const SDK_VERSION = "4.3";
 const HOMEDIR = os.homedir();
+const OS_PLATFORM = os.platform();
 
 function _getFirmwareSymbolFile(platform: string, sdk_version: string): string {
-	const fw_symbols = path.join(HOMEDIR, ".pebble-sdk", "SDKs", sdk_version, "sdk-core", "pebble", platform, "qemu", `${platform}_sdk_debug.elf`);
-	if (!fs.existsSync(fw_symbols)) {
-		throw new Error(`Firmware symbols not found at ${fw_symbols}. Is the SDK installed?`);
+	if (OS_PLATFORM === "linux") {
+		const fw_symbols = path.join(HOMEDIR, ".pebble-sdk", "SDKs", sdk_version, "sdk-core", "pebble", platform, "qemu", `${platform}_sdk_debug.elf`);
+		if (!fs.existsSync(fw_symbols)) {
+			throw new Error(`Firmware symbols not found at ${fw_symbols}. Is the SDK installed?`);
+		}
+		return fw_symbols;
+	} else if (OS_PLATFORM === "darwin") {
+		const fw_symbols = path.join(HOMEDIR, "Library", "Application Support", "Pebble SDK", "SDKs", sdk_version, "sdk-core", "pebble", platform, "qemu", `${platform}_sdk_debug.elf`);
+		if (!fs.existsSync(fw_symbols)) {
+			throw new Error(`Firmware symbols not found at ${fw_symbols}. Is the SDK installed?`);
+		}
+		return fw_symbols;
+	} else {
+		throw new Error(`Unsupported platform ${OS_PLATFORM}`);
 	}
-	return fw_symbols;
 }
 function _getGdbPath(): string {
-	const gdbPath = path.join(HOMEDIR, "pebble-dev", "pebble-sdk-4.6-rc2-linux64", "arm-cs-tools", "bin", "arm-none-eabi-gdb");
-	if (!fs.existsSync(gdbPath)) {
-		throw new Error(`Can't find Pebble gdb. Is the SDK installed?`);
+	if (OS_PLATFORM === "linux") {
+		const gdbPath = path.join(HOMEDIR, "pebble-dev", "pebble-sdk-4.6-rc2-linux64", "arm-cs-tools", "bin", "arm-none-eabi-gdb");
+		if (!fs.existsSync(gdbPath)) {
+			throw new Error(`Can't find Pebble gdb. Is the SDK installed?`);
+		}
+		return gdbPath;
+	} else if (OS_PLATFORM === "darwin") {
+		const gdbPath = path.join(HOMEDIR, "pebble-dev", "pebble-sdk-4.6-rc2-mac", "arm-cs-tools", "bin", "arm-none-eabi-gdb");
+		if (!fs.existsSync(gdbPath)) {
+			throw new Error(`Can't find Pebble gdb. Is the SDK installed?`);
+		}
+		return gdbPath;
+	} else {
+		throw new Error(`Unsupported platform ${OS_PLATFORM}`);
 	}
-	return gdbPath;
 }
+
+function _getEmulatorPath(): string {
+	// get pb-emulator.json
+	if (OS_PLATFORM === "linux") {
+		const emulatorPath = path.join("/tmp", "pb-emulator.json");
+		return emulatorPath;
+	} else if (OS_PLATFORM === "darwin") {
+		throw new Error(`macOS support is not implemented yet.`);
+	} else {
+		throw new Error(`Unsupported platform ${OS_PLATFORM}`);
+	}
+}
+
 
 class PebbleDebugSession extends MI2DebugSession {
 	protected override initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
@@ -63,7 +95,7 @@ class PebbleDebugSession extends MI2DebugSession {
 			return;
 		}
 
-		const emulators = JSON.parse(fs.readFileSync("/tmp/pb-emulator.json", "utf8"));
+		const emulators = JSON.parse(fs.readFileSync(_getEmulatorPath(), "utf8"));
 		if (!emulators[args.platform]) {
 			this.sendErrorResponse(response, 104, `Emulator with platform ${args.platform} not found.`);
 			return;
@@ -89,12 +121,12 @@ class PebbleDebugSession extends MI2DebugSession {
 		this.quit = false;
 		this.platform = args.platform;
 		this.attached = false;
-		this.initialRunCommand = RunCommand.NONE; // TODO: change this
+		this.initialRunCommand = RunCommand.NONE;
 		this.isSSH = false;
 		this.setValuesFormattingMode("disabled");
 		this.miDebugger.frameFilters = false;
 		this.miDebugger.printCalls = true;
-		this.miDebugger.debugOutput = false;
+		this.miDebugger.debugOutput = true;
 		this.miDebugger.prettyPrint = true;
 		this.stopAtEntry = false;
 		this.miDebugger.registerLimit = "";
@@ -127,7 +159,7 @@ class PebbleDebugSession extends MI2DebugSession {
 			return;
 		}
 
-		const emulators = JSON.parse(fs.readFileSync("/tmp/pb-emulator.json", "utf8"));
+		const emulators = JSON.parse(fs.readFileSync(_getEmulatorPath(), "utf8"));
 		if (!emulators[args.platform]) {
 			this.sendErrorResponse(response, 104, `Emulator with platform ${args.platform} not found.`);
 			return;
