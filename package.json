@@ -75,6 +75,14 @@
 							"workDir": {
 								"type": "string",
 								"description": "Working directory for the emulator."
+							},
+							"sdkCorePath": {
+								"type": "string",
+								"description": "Path to the SDK core, if not in the default location."
+							},
+							"pebbleDevPath": {
+								"type": "string",
+								"description": "Path to the Pebble development tools (pebble-dev folder), if not in the default location."
 							}
 						}
 					},
@@ -96,8 +104,15 @@
 							"workDir": {
 								"type": "string",
 								"description": "Working directory for the emulator."
+							},
+							"sdkCorePath": {
+								"type": "string",
+								"description": "Path to the SDK core, if not in the default location."
+							},
+							"pebbleDevPath": {
+								"type": "string",
+								"description": "Path to the Pebble development tools (pebble-dev folder), if not in the default location."
 							}
-
 						}
 					}
 				},

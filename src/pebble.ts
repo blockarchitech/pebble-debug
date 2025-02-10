@@ -12,48 +12,85 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
 	platform: string;
 	elfPath: string;
 	workDir: string;
+	sdkCorePath: string;
+	pebbleDevPath: string;
 }
 
 export interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments {
 	platform: string;
 	elfPath: string;
 	workDir: string;
+	sdkCorePath: string;
+	pebbleDevPath: string;
 }
 
 const SDK_VERSION = "4.3";
 const HOMEDIR = os.homedir();
 const OS_PLATFORM = os.platform();
 
-function _getFirmwareSymbolFile(platform: string, sdk_version: string): string {
+function _getFirmwareSymbolFile(platform: string, sdk_version: string, args: AttachRequestArguments | LaunchRequestArguments): string {
 	if (OS_PLATFORM === "linux") {
-		const fw_symbols = path.join(HOMEDIR, ".pebble-sdk", "SDKs", sdk_version, "sdk-core", "pebble", platform, "qemu", `${platform}_sdk_debug.elf`);
-		if (!fs.existsSync(fw_symbols)) {
-			throw new Error(`Firmware symbols not found at ${fw_symbols}. Is the SDK installed?`);
+		if (!args.sdkCorePath) {
+			const fw_symbols = path.join(HOMEDIR, ".pebble-sdk", "SDKs", sdk_version, "sdk-core", "pebble", platform, "qemu", `${platform}_sdk_debug.elf`);
+			if (!fs.existsSync(fw_symbols)) {
+				throw new Error(`Firmware symbols not found at ${fw_symbols}. Is the SDK installed?`);
+			}
+			return fw_symbols;
+		} else {
+			const fw_symbols = path.join(args.sdkCorePath, "pebble", platform, "qemu", `${platform}_sdk_debug.elf`);
+			if (!fs.existsSync(fw_symbols)) {
+				throw new Error(`Firmware symbols not found at ${fw_symbols}. Is the SDK installed?`);
+			}
+			return fw_symbols;
 		}
-		return fw_symbols;
 	} else if (OS_PLATFORM === "darwin") {
-		const fw_symbols = path.join(HOMEDIR, "Library", "Application Support", "Pebble SDK", "SDKs", sdk_version, "sdk-core", "pebble", platform, "qemu", `${platform}_sdk_debug.elf`);
-		if (!fs.existsSync(fw_symbols)) {
-			throw new Error(`Firmware symbols not found at ${fw_symbols}. Is the SDK installed?`);
+		if (!args.sdkCorePath) {
+			const fw_symbols = path.join(HOMEDIR, "Library", "Application Support", "Pebble SDK", "SDKs", sdk_version, "sdk-core", "pebble", platform, "qemu", `${platform}_sdk_debug.elf`);
+			if (!fs.existsSync(fw_symbols)) {
+				throw new Error(`Firmware symbols not found at ${fw_symbols}. Is the SDK installed?`);
+			}
+			return fw_symbols;
+		} else {
+			const fw_symbols = path.join(args.sdkCorePath, "pebble", platform, "qemu", `${platform}_sdk_debug.elf`);
+			if (!fs.existsSync(fw_symbols)) {
+				throw new Error(`Firmware symbols not found at ${fw_symbols}. Is the SDK installed?`);
+			}
+			return fw_symbols;
 		}
-		return fw_symbols;
 	} else {
 		throw new Error(`Unsupported platform ${OS_PLATFORM}`);
 	}
 }
-function _getGdbPath(): string {
+function _getGdbPath(args: AttachRequestArguments | LaunchRequestArguments): string {
 	if (OS_PLATFORM === "linux") {
-		const gdbPath = path.join(HOMEDIR, "pebble-dev", "pebble-sdk-4.6-rc2-linux64", "arm-cs-tools", "bin", "arm-none-eabi-gdb");
-		if (!fs.existsSync(gdbPath)) {
-			throw new Error(`Can't find Pebble gdb. Is the SDK installed?`);
+		if (!args.pebbleDevPath) {
+			const gdbPath = path.join(HOMEDIR, "pebble-dev", "pebble-sdk-4.6-rc2-linux64", "arm-cs-tools", "bin", "arm-none-eabi-gdb");
+			if (!fs.existsSync(gdbPath)) {
+				throw new Error(`Can't find Pebble gdb. Is the SDK installed?`);
+			}
+			return gdbPath;
+		} else {
+			const gdbPath = path.join(args.pebbleDevPath, "arm-cs-tools", "bin", "arm-none-eabi-gdb");
+			if (!fs.existsSync(gdbPath)) {
+				throw new Error(`Can't find Pebble gdb. Is the SDK installed?`);
+			}
+			return gdbPath;
 		}
-		return gdbPath;
+		
 	} else if (OS_PLATFORM === "darwin") {
-		const gdbPath = path.join(HOMEDIR, "pebble-dev", "pebble-sdk-4.6-rc2-mac", "arm-cs-tools", "bin", "arm-none-eabi-gdb");
-		if (!fs.existsSync(gdbPath)) {
-			throw new Error(`Can't find Pebble gdb. Is the SDK installed?`);
+		if (!args.pebbleDevPath) {
+			const gdbPath = path.join(HOMEDIR, "pebble-dev", "pebble-sdk-4.6-rc2-mac", "arm-cs-tools", "bin", "arm-none-eabi-gdb");
+			if (!fs.existsSync(gdbPath)) {
+				throw new Error(`Can't find Pebble gdb. Is the SDK installed?`);
+			}
+			return gdbPath;
+		} else {
+			const gdbPath = path.join(args.pebbleDevPath, "arm-cs-tools", "bin", "arm-none-eabi-gdb");
+			if (!fs.existsSync(gdbPath)) {
+				throw new Error(`Can't find Pebble gdb. Is the SDK installed?`);
+			}
+			return gdbPath;
 		}
-		return gdbPath;
 	} else {
 		throw new Error(`Unsupported platform ${OS_PLATFORM}`);
 	}
@@ -89,7 +126,7 @@ class PebbleDebugSession extends MI2DebugSession {
 	protected override launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
 		const pebbleTool = PebbleTool.getInstance();
 		pebbleTool.spawnEmulator(args.workDir, args.platform as any);
-		const dbgCommand = _getGdbPath();
+		const dbgCommand = _getGdbPath(args);
 		if (!this.checkCommand(dbgCommand)) {
 			this.sendErrorResponse(response, 104, `Configured debugger ${dbgCommand} not found.`);
 			return;
@@ -110,7 +147,7 @@ class PebbleDebugSession extends MI2DebugSession {
 			this.sendErrorResponse(response, 104, `Emulator with platform ${args.platform} does not have a GDB server.`);
 			return;
 		}
-		const fw_elf = _getFirmwareSymbolFile(args.platform, SDK_VERSION);
+		const fw_elf = _getFirmwareSymbolFile(args.platform, SDK_VERSION, args);
 
 		const gdbCommands = buildGdbCommands(args.elfPath, fw_elf, args.platform);
 
@@ -153,7 +190,7 @@ class PebbleDebugSession extends MI2DebugSession {
 	}
 
 	protected override attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
-		const dbgCommand = _getGdbPath();
+		const dbgCommand = _getGdbPath(args);
 		if (!this.checkCommand(dbgCommand)) {
 			this.sendErrorResponse(response, 104, `Configured debugger ${dbgCommand} not found.`);
 			return;
@@ -189,7 +226,7 @@ class PebbleDebugSession extends MI2DebugSession {
 			return;
 		}
 
-		const fw_elf = _getFirmwareSymbolFile(args.platform, SDK_VERSION);
+		const fw_elf = _getFirmwareSymbolFile(args.platform, SDK_VERSION, args);
 		const gdbCommands = buildGdbCommands(args.elfPath, fw_elf, args.platform);
 
 		this.miDebugger = new MI2(dbgCommand, ["--interpreter=mi2"], [], []);
