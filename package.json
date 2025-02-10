@@ -6,7 +6,7 @@
 		"pebble"
 	],
 	"license": "public domain",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"publisher": "blockarchitech",
 	"icon": "images/icon.png",
 	"engines": {
