@@ -58,10 +58,9 @@ VS Code IntelliSense will also help you fill in the configuration. Simply create
 
 ## Caveats
 - This is currently a work in progress. Please report any issues you encounter.
-- As of current, it's only available on Linux based systems, and assumes your pebble toolchain is installed in the default location (`~/pebble-dev`). You can  change this by setting `pebbleDevPath` in your configuration.
-  - Soon, it will also be available on macOS. Windows will not be supported as the Pebble SDK does not support it.
 - It sometimes will not kill the emulator when you stop debugging. You may need to manually kill it, or the next time you try to debug, it will fail.
 - It technically may work with multiple emulators running at the same time (integration testing? :D), but it's not recommended as this is not a tested use case.
+- **I have no idea if this works on Apple Silicon Macs.** It should work, but if you encounter any issues, please open a new issue and I'll look into them. Unfortunately, I don't have an Apple Silicon Mac to test on, but I can assist in debugging any issues you encounter.
 - **You currently have to manually pause the debugger, set/remove breakpoints, and continue the debugger.** This is a limitation of the current implementation, and will be fixed in the future.
   - It's mainly because the upstream version of this plugin (code-debug) used a promise-based API instead of the async/await API, and adding the auto reload functionality breaks some things downstream. I'm working on changing this to use the async/await API, and then I can add the auto reload functionality. For now, however, you're not losing much functionality, as GDB requires you to manually pause the debugger to set/remove breakpoints anyway.
   - You can also set your breakpoints, and then stop + reload, and that will also work, if that's easier for you.
