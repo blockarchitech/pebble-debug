@@ -42,6 +42,18 @@ VS Code IntelliSense will also help you fill in the configuration. Simply create
   - This is optional, and defaults to `~/pebble-dev`.
 - `sdkCorePath`: The path to the core SDK files.
   - This is optional, and defaults to `~/.pebble-sdk/SDKs/current/sdk-core`.
+- `usePathGDB`: Whether to use the GDB in your PATH.
+  - This is optional, and defaults to `false`.
+  - If you have GDB in your PATH, you can set this to `true` to use it.
+  - It must be `arm-none-eabi-gdb` to maintain compatibility with the Pebble SDK.
+- `pebbleToolName`: The name of the Pebble tool in your path. Usually `pebble`.
+  - This is optional, and defaults to `pebble`.
+  - If you use something like [rebbletool](https://github.com/richinfante/rebbletool), you can set this to `rebble`.
+- `armCSToolsPath`: The path to the ARM CS Tools.
+  - This is optional, and the extension will try to find it automagically.
+  - If you have it installed in a non-standard location, you can set this to the correct path.
+  - `arm-none-eabi-readelf`, `arm-none-eabi-objdump` and `arm-none-eabi-gdb` must be in this directory.
+  - GDB from this path is ignored and not required if `usePathGDB` is set to `true`.
 
 
 ## Caveats

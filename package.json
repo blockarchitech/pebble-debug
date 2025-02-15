@@ -6,7 +6,7 @@
 		"pebble"
 	],
 	"license": "public domain",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"publisher": "blockarchitech",
 	"icon": "images/icon.png",
 	"engines": {
@@ -83,6 +83,18 @@
 							"pebbleDevPath": {
 								"type": "string",
 								"description": "Path to the Pebble development tools (pebble-dev folder), if not in the default location."
+							},
+							"usePathGDB": {
+								"type": "boolean",
+								"description": "Use the path to the GDB binary in the PATH environment variable instead of the one in the SDK."
+							},
+							"pebbleToolName": {
+								"type": "string",
+								"description": "Name of the Pebble tool to use (usually `pebble`. However, if you are using something else or a wrapper, it may be different. It must be in your PATH)."
+							},
+							"armCSToolsPath": {
+								"type": "string",
+								"description": "Path to the ARM CS Tools, if not in the default location. Must contain arm-none-eabi-gdb, arm-none-eabi-readelf, and arm-none-eabi-objdump."
 							}
 						}
 					},
@@ -112,6 +124,18 @@
 							"pebbleDevPath": {
 								"type": "string",
 								"description": "Path to the Pebble development tools (pebble-dev folder), if not in the default location."
+							},
+							"usePathGDB": {
+								"type": "boolean",
+								"description": "Use the path to the GDB binary in the PATH environment variable instead of the one in the SDK."
+							},
+							"pebbleToolName": {
+								"type": "string",
+								"description": "Name of the Pebble tool to use (usually `pebble`. However, if you are using something else or a wrapper, it may be different. It must be in your PATH)."
+							},
+							"armCSToolsPath": {
+								"type": "string",
+								"description": "Path to the ARM CS Tools, if not in the default location. Must contain arm-none-eabi-gdb, arm-none-eabi-readelf, and arm-none-eabi-objdump."
 							}
 						}
 					}

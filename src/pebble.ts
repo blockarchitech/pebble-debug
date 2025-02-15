@@ -9,11 +9,14 @@ import * as os from 'os';
 import * as path from 'path';
 
 export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
-	platform: string;
-	elfPath: string;
-	workDir: string;
-	sdkCorePath: string;
-	pebbleDevPath: string;
+	platform: string; // Platform to debug on. Can be any of the platforms supported by the Pebble SDK, and that you have QEMU firmware for.
+	elfPath: string; // Path to the elf file to debug.
+	workDir: string; // Path to the project folder. 
+	sdkCorePath: string; // Optional: Path to the SDK core folder.  Default is ~/.pebble-sdk.
+	pebbleDevPath: string; // Optional: Path to the pebble-dev folder (basically irrelevant if the below options are set). Default is ~/pebble-dev.
+	usePathGdb: boolean; // Optional: Use the system arm-none-eabi-gdb instead of the one bundled with the SDK. Default is false.
+	pebbleToolName: string; // Optional: Name of pebble-tool or pebble-tool compatible in PATH. Default is "pebble".
+	armCSToolsPath: string; // Optional: Path to the ARM CS tools. Default is pebble-sdk-4.6-rc2-<os>64/arm-cs-tools/bin. Must contain arm-none-eabi-gdb, arm-none-eabi-readelf, and arm-none-eabi-objdump.
 }
 
 export interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments {
@@ -22,6 +25,9 @@ export interface AttachRequestArguments extends DebugProtocol.AttachRequestArgum
 	workDir: string;
 	sdkCorePath: string;
 	pebbleDevPath: string;
+	usePathGdb: boolean;
+	pebbleToolName: string;
+	armCSToolsPath: string;
 }
 
 const SDK_VERSION = "4.3";
@@ -62,7 +68,22 @@ function _getFirmwareSymbolFile(platform: string, sdk_version: string, args: Att
 	}
 }
 function _getGdbPath(args: AttachRequestArguments | LaunchRequestArguments): string {
+	if (args.usePathGdb) {
+		if (!this.checkCommand("arm-none-eabi-gdb")) {
+			throw new Error(`If you want to use the system gdb, make sure arm-none-eabi-gdb is in your PATH.`);
+		}
+
+		return "arm-none-eabi-gdb";
+	}
+
 	if (OS_PLATFORM === "linux") {
+		if (args.armCSToolsPath) {
+			const gdbPath = path.join(args.armCSToolsPath, "arm-none-eabi-gdb");
+			if (!fs.existsSync(gdbPath)) {
+				throw new Error(`Can't find arm-none-eabi-gdb in your ARM CS tools folder. Are they installed?`);
+			}
+			return gdbPath;
+		}
 		if (!args.pebbleDevPath) {
 			const gdbPath = path.join(HOMEDIR, "pebble-dev", "pebble-sdk-4.6-rc2-linux64", "arm-cs-tools", "bin", "arm-none-eabi-gdb");
 			if (!fs.existsSync(gdbPath)) {
@@ -78,6 +99,13 @@ function _getGdbPath(args: AttachRequestArguments | LaunchRequestArguments): str
 		}
 		
 	} else if (OS_PLATFORM === "darwin") {
+		if (args.armCSToolsPath) {
+			const gdbPath = path.join(args.armCSToolsPath, "arm-none-eabi-gdb");
+			if (!fs.existsSync(gdbPath)) {
+				throw new Error(`Can't find arm-none-eabi-gdb in your ARM CS tools folder. Are they installed?`);
+			}
+			return gdbPath;
+		}
 		if (!args.pebbleDevPath) {
 			const gdbPath = path.join(HOMEDIR, "pebble-dev", "pebble-sdk-4.6-rc2-mac", "arm-cs-tools", "bin", "arm-none-eabi-gdb");
 			if (!fs.existsSync(gdbPath)) {
@@ -96,17 +124,7 @@ function _getGdbPath(args: AttachRequestArguments | LaunchRequestArguments): str
 	}
 }
 
-function _getEmulatorPath(): string {
-	// get pb-emulator.json
-	if (OS_PLATFORM === "linux") {
-		const emulatorPath = path.join("/tmp", "pb-emulator.json");
-		return emulatorPath;
-	} else if (OS_PLATFORM === "darwin") {
-		throw new Error(`macOS support is not implemented yet.`);
-	} else {
-		throw new Error(`Unsupported platform ${OS_PLATFORM}`);
-	}
-}
+
 
 
 class PebbleDebugSession extends MI2DebugSession {
@@ -124,7 +142,7 @@ class PebbleDebugSession extends MI2DebugSession {
 	}
 
 	protected override launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
-		const pebbleTool = PebbleTool.getInstance();
+		const pebbleTool = new PebbleTool(args);
 		pebbleTool.spawnEmulator(args.workDir, args.platform as any);
 		const dbgCommand = _getGdbPath(args);
 		if (!this.checkCommand(dbgCommand)) {
@@ -132,7 +150,7 @@ class PebbleDebugSession extends MI2DebugSession {
 			return;
 		}
 
-		const emulators = JSON.parse(fs.readFileSync(_getEmulatorPath(), "utf8"));
+		const emulators = JSON.parse(fs.readFileSync(PebbleTool.getPbEmulatorFile(), "utf8"));
 		if (!emulators[args.platform]) {
 			this.sendErrorResponse(response, 104, `Emulator with platform ${args.platform} not found.`);
 			return;
@@ -149,7 +167,7 @@ class PebbleDebugSession extends MI2DebugSession {
 		}
 		const fw_elf = _getFirmwareSymbolFile(args.platform, SDK_VERSION, args);
 
-		const gdbCommands = buildGdbCommands(args.elfPath, fw_elf, args.platform);
+		const gdbCommands = buildGdbCommands(args.elfPath, fw_elf, args.platform, args);
 
 		this.miDebugger = new MI2(dbgCommand, [
 			"--interpreter=mi2"
@@ -185,8 +203,7 @@ class PebbleDebugSession extends MI2DebugSession {
 				console.error("Failed to unlink debug server");
 			});
 
-		const pebbleTool = PebbleTool.getInstance();
-		pebbleTool.killEmulator(this.platform as any);
+		PebbleTool.killEmulator(this.platform as any);
 	}
 
 	protected override attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
@@ -196,7 +213,7 @@ class PebbleDebugSession extends MI2DebugSession {
 			return;
 		}
 
-		const emulators = JSON.parse(fs.readFileSync(_getEmulatorPath(), "utf8"));
+		const emulators = JSON.parse(fs.readFileSync(PebbleTool.getPbEmulatorFile(), "utf8"));
 		if (!emulators[args.platform]) {
 			this.sendErrorResponse(response, 104, `Emulator with platform ${args.platform} not found.`);
 			return;
@@ -227,7 +244,7 @@ class PebbleDebugSession extends MI2DebugSession {
 		}
 
 		const fw_elf = _getFirmwareSymbolFile(args.platform, SDK_VERSION, args);
-		const gdbCommands = buildGdbCommands(args.elfPath, fw_elf, args.platform);
+		const gdbCommands = buildGdbCommands(args.elfPath, fw_elf, args.platform, args);
 
 		this.miDebugger = new MI2(dbgCommand, ["--interpreter=mi2"], [], []);
 		this.initDebugger();

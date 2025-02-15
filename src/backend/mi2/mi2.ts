@@ -522,7 +522,6 @@ export class MI2 extends EventEmitter implements IBackend {
 				clearTimeout(to);
 			});
 			this.sendRaw("-gdb-exit");
-			const tool = PebbleTool.getInstance();
 			this.emit("quit");
 		}
 	}

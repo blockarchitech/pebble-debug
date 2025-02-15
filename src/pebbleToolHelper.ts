@@ -3,7 +3,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as subprocess from 'child_process';
-
+import * as os from 'os';
+import { AttachRequestArguments, LaunchRequestArguments } from './pebble';
+const OS_PLATFORM = os.platform();
 type Platform = 'aplite' | 'basalt' | 'chalk' | 'diorite' | 'emery';
 // example usage:
 // const pebbleTool = PebbleTool.getInstance();
@@ -12,21 +14,21 @@ class PebbleTool {
 	private static _instance: PebbleTool;
 	private _pebbleDevPath: string;
 	private _pebbleSDKPath: string;
-	private _pebbleToolPath: string;
 	private _armCSToolsPath: string;
+	private _toolName: string = 'pebble';
 
-	private constructor() {
-		this._pebbleDevPath = path.join(process.env.HOME, 'pebble-dev');
-		this._pebbleSDKPath = path.join(this._pebbleDevPath, 'pebble-sdk-4.6-rc2-linux64'); // pebble toolchain + ARM tools. the SDK core is actually in ~/.pebble-sdk
-		this._pebbleToolPath = path.join(this._pebbleSDKPath, 'bin'); // pebble
-		this._armCSToolsPath = path.join(this._pebbleSDKPath, 'arm-cs-tools', 'bin'); // arm-none-eabi-xxx tools 
-	}
-
-	public static getInstance(): PebbleTool {
-		if (!PebbleTool._instance) {
-			PebbleTool._instance = new PebbleTool();
+	constructor(args: LaunchRequestArguments | AttachRequestArguments) {
+		this._pebbleDevPath = args.pebbleDevPath ?? path.join(process.env.HOME, 'pebble-dev');
+		if (os.platform() === 'darwin') {
+			this._pebbleSDKPath = path.join(this._pebbleDevPath, 'pebble-sdk-4.6-rc2-mac');
+		} else {
+			this._pebbleSDKPath = path.join(this._pebbleDevPath, 'pebble-sdk-4.6-rc2-linux64'); // pebble toolchain + ARM tools. the SDK core is actually in ~/.pebble-sdk
 		}
-		return PebbleTool._instance;
+		this._armCSToolsPath = path.join(this._pebbleSDKPath, 'arm-cs-tools', 'bin'); // arm-none-eabi-xxx tools 
+
+		if (args.pebbleToolName) {
+			this._toolName = args.pebbleToolName;
+		}
 	}
 
 	public getARMCSTool(tool: string): string {
@@ -39,7 +41,7 @@ class PebbleTool {
 
 	public spawnEmulator(cwd: string, platform: Platform) {
 		this.buildProject(cwd);
-		const pebbleInstall = subprocess.spawnSync('pebble', ['install', '--emulator', platform], { cwd });
+		const pebbleInstall = subprocess.spawnSync(this._toolName, ['install', '--emulator', platform], { cwd });
 		if (pebbleInstall.status !== 0) {
 			throw new PebbleToolError(`Emulator failed to start with exit code ${pebbleInstall.status}`);
 		}
@@ -47,8 +49,20 @@ class PebbleTool {
 		return;
 	}
 
-	public killEmulator(platform: Platform) {
-		const emulators = JSON.parse(fs.readFileSync("/tmp/pb-emulator.json", "utf8"));
+	public static getPbEmulatorFile(): string {
+		// on mac, it's in $TMPDIR/pb-emulator.json
+		// on linux, it's in /tmp/pb-emulator.json
+		if (OS_PLATFORM === 'darwin') {
+			return path.join(process.env.TMPDIR, 'pb-emulator.json');
+		} else if (OS_PLATFORM === 'linux') {
+			return '/tmp/pb-emulator.json';
+		} else {
+			throw new Error(`Unsupported platform ${OS_PLATFORM}`);
+		}
+	}
+
+	public static killEmulator(platform: Platform) {
+		const emulators = JSON.parse(fs.readFileSync(this.getPbEmulatorFile(), "utf8"));
 		if (!emulators[platform]) {
 			throw new Error(`No emulator running for platform ${platform}`);
 		}
@@ -60,7 +74,7 @@ class PebbleTool {
 	}
 
 	public buildProject(cwd: string) {
-		const pebbleBuild = subprocess.spawnSync('pebble', ['build'], { cwd });
+		const pebbleBuild = subprocess.spawnSync(this._toolName, ['build'], { cwd });
 		if (pebbleBuild.status !== 0) {
 			throw new PebbleToolError(`Build failed with exit code ${pebbleBuild.status}: ${pebbleBuild.stderr.toString()}`);
 		}
